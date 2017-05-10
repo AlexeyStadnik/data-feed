@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class PolyvoreClient {
@@ -35,20 +36,23 @@ public class PolyvoreClient {
   private static final String PREFIX = "http://www.polyvore.com";
 
   WebDriver driver;
+  WebDriver driverForItems;
+  DesiredCapabilities caps;
 
   {
-    DesiredCapabilities caps = new DesiredCapabilities();
+    caps = new DesiredCapabilities();
     caps.setJavascriptEnabled(true);
-    caps.setCapability(PhantomJSDriverService.PHANTOMJS_EXECUTABLE_PATH_PROPERTY, "/Users/aliaksei/Soft/phantomjs-2.1.1-macosx/bin/phantomjs");
+    caps.setCapability(PhantomJSDriverService.PHANTOMJS_EXECUTABLE_PATH_PROPERTY, "C:\\Users\\Alexey\\Desktop\\phantomjs-2.1.1-windows\\bin\\phantomjs.exe");
 
     driver = new PhantomJSDriver(caps);
+    driverForItems = new PhantomJSDriver(caps);
   }
 
   public List<String> retrieveHrefs() {
     ArrayList<String> hrefs = new ArrayList<>();
 
     Gson gson = new Gson();
-    for (int i = 0; i <= 90; i = i + 30) {
+    for (int i = 0; i <= 900; i = i + 30) {
       driver.navigate().to(String.format(POLYVORE_URL, i));
 
       JSONObject json = new JSONObject(driver.getPageSource().substring(84));
@@ -63,39 +67,80 @@ public class PolyvoreClient {
   }
 
   public List<Outfit> retrieveOutfits(List<String> hrefs) {
-    return hrefs.parallelStream().map(this::retrieveSingleOutfit).collect(Collectors.toList());
+    return hrefs.parallelStream().map(this::retrieveSingleOutfit).filter(Objects::nonNull).collect(Collectors.toList());
   }
 
   private Outfit retrieveSingleOutfit(String href) {
-    driver.navigate().to(href);
-    Outfit outfit = new Outfit();
+    try {
+      driver.navigate().to(href);
+      Outfit outfit = new Outfit();
 
-    List<WebElement> mainImg = driver.findElements(By.className("main_img"));
+      List<WebElement> mainImg = driver.findElements(By.className("main_img"));
 
-    outfit.setMainImage(retrieveImage(mainImg.get(1).getAttribute("src")));
+      outfit.setMainImage(retrieveImage(mainImg.get(1).getAttribute("src")));
 
 
-    String favCount = driver.findElements(By.className("fav_count")).get(0).getText();
-    outfit.setLikes(Integer.parseInt(favCount.replace(",","")));
+      String favCount = driver.findElements(By.className("fav_count")).get(0).getText();
+      try {
+        outfit.setLikes(Integer.parseInt(favCount.replace(",", "")));
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
 
-    outfit.setOutfitName(driver.getTitle());
+      outfit.setOutfitName(driver.getTitle().replaceAll("\\\\", " "));
 
 //    WebElement webElement = driver.findElements(By.xpath("//div[@class='grid_item hover_container type_thing span1w span1h']")).get(0);
 //
 //    List<WebElement> itemElements = webElement.findElements(By.xpath(".//li"));
 
-    ArrayList<Item> items = new ArrayList<>();
+      ArrayList<Item> items = new ArrayList<>();
 
-    driver.findElements(By.className("img_size_m")).forEach(img -> {
-      WebElement parent = img.findElement(By.xpath(".."));
-      String itemHref = parent.getAttribute("href");
-      
-    });
+      driver.findElements(By.className("img_size_m")).forEach(img -> {
+        WebElement parent = img.findElement(By.xpath(".."));
+        String itemHref = parent.getAttribute("href");
+        Item item = retrieveItem(driverForItems, itemHref);
+        if (item != null) {
+          items.add(item);
+        }
+      });
 
-    outfit.setItemList(items);
-    PolyvoreRunner.persistToFileSystem(outfit);
-    return outfit;
+      outfit.setItemList(items);
+      PolyvoreRunner.persistToFileSystem(outfit);
+      return outfit;
+    }catch (Exception e) {
+      return null;
+    }
   }
+
+  private Item retrieveItem(WebDriver driver, String itemHref) {
+    driver.navigate().to(itemHref);
+    Item item = new Item();
+    List<WebElement> crumb = driver.findElements(By.className("crumb"));
+    if(crumb.size() < 2) {
+      return null;
+    }
+    List<String> category = new ArrayList<>();
+    crumb.forEach(cat -> {
+      category.add(cat.findElement(By.xpath(".//span")).getText());
+    });
+    item.setCategories(category);
+
+    WebElement thingImg = driver.findElement(By.id("thing_img")).findElement(By.xpath(".//a")).findElement(By.xpath(".//img"));
+
+    String imageHref = thingImg.getAttribute("src");
+    String title = thingImg.getAttribute("title");
+
+    List<WebElement> db = driver.findElements(By.className("bd"));
+    WebElement element = db.get(1).findElement(By.xpath(".//div"));
+    String desc = element.findElement(By.xpath(".//div")).getText();
+
+    item.setItemImage(retrieveImage(imageHref));
+    item.setItemTitle(title.replaceAll("\\\\", " "));
+    item.setDesc(desc);
+
+    return item;
+  }
+
 
   private BufferedImage retrieveImage(String ref) {
     try {

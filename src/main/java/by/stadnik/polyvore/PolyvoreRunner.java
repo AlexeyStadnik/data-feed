@@ -22,7 +22,7 @@ public class PolyvoreRunner {
   public static void persistToFileSystem(Outfit outfit) {
     ObjectMapper om = new ObjectMapper();
 
-    File dir = new File("output/" + outfit.getOutfitName());
+    File dir = new File("output\\" + outfit.getOutfitName());
     dir.mkdirs();
 
     File outputfile = new File(dir, outfit.getOutfitName().trim() + ".png");
@@ -35,7 +35,7 @@ public class PolyvoreRunner {
       e.printStackTrace();
     }
 
-    outfit.getItemList().forEach(item -> {
+    outfit.getItemList().parallelStream().filter(im -> im.getItemImage() != null && im.getItemTitle() != null).forEach(item -> {
       File itemFile = new File(dir, item.getItemTitle().trim() + ".png");
       try {
         ImageIO.write(item.getItemImage(), "png", itemFile);

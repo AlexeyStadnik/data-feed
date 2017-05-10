@@ -2,6 +2,7 @@ package by.stadnik.polyvore.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import java.util.List;
 
 import java.awt.image.BufferedImage;
 
@@ -9,10 +10,14 @@ import java.awt.image.BufferedImage;
 public class Item {
 
   private String itemTitle;
+  @JsonIgnore
   private String itemRef;
   @JsonIgnore
   private BufferedImage itemImage;
+  @JsonIgnore
   private Integer itemLikes;
+  private List<String> categories;
+  private String desc;
 
   public String getItemTitle() {
     return itemTitle;
@@ -46,4 +51,19 @@ public class Item {
     this.itemLikes = itemLikes;
   }
 
+  public List<String> getCategories() {
+    return categories;
+  }
+
+  public void setCategories(List<String> categories) {
+    this.categories = categories;
+  }
+
+  public String getDesc() {
+    return desc;
+  }
+
+  public void setDesc(String desc) {
+    this.desc = desc;
+  }
 }
