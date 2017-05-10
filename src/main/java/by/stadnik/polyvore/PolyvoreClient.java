@@ -31,7 +31,7 @@ public class PolyvoreClient {
 
   private static final String POLYVORE_URL =
       "http://www.polyvore.com/cgi/search.sets?.in=json" +
-          "&.out=jsonx&request={\"query\":\"*\",\".search_src\":\"masthead_search\",\"page\":null,\".passback\":{\"next_token\":{\"limit\":\"30\",\"start\":%s}}}&.locale=ru";
+          "&.out=jsonx&request={\"query\":\"%s\",\".search_src\":\"masthead_search\",\"page\":null,\".passback\":{\"next_token\":{\"limit\":\"30\",\"start\":%s}}}&.locale=ru";
 
   private static final String PREFIX = "http://www.polyvore.com";
 
@@ -42,18 +42,18 @@ public class PolyvoreClient {
   {
     caps = new DesiredCapabilities();
     caps.setJavascriptEnabled(true);
-    caps.setCapability(PhantomJSDriverService.PHANTOMJS_EXECUTABLE_PATH_PROPERTY, "C:\\Users\\Alexey\\Desktop\\phantomjs-2.1.1-windows\\bin\\phantomjs.exe");
+    caps.setCapability(PhantomJSDriverService.PHANTOMJS_EXECUTABLE_PATH_PROPERTY, "/Users/aliaksei/Soft/phantomjs-2.1.1-macosx/bin/phantomjs");
 
     driver = new PhantomJSDriver(caps);
     driverForItems = new PhantomJSDriver(caps);
   }
 
-  public List<String> retrieveHrefs() {
+  public List<String> retrieveHrefs(String criteria) {
     ArrayList<String> hrefs = new ArrayList<>();
 
     Gson gson = new Gson();
     for (int i = 0; i <= 900; i = i + 30) {
-      driver.navigate().to(String.format(POLYVORE_URL, i));
+      driver.navigate().to(String.format(POLYVORE_URL, criteria, i));
 
       JSONObject json = new JSONObject(driver.getPageSource().substring(84));
       String result = ((JSONObject) json.get("result")).getString("html");
@@ -67,7 +67,7 @@ public class PolyvoreClient {
   }
 
   public List<Outfit> retrieveOutfits(List<String> hrefs) {
-    return hrefs.parallelStream().map(this::retrieveSingleOutfit).filter(Objects::nonNull).collect(Collectors.toList());
+    return hrefs.stream().map(this::retrieveSingleOutfit).filter(Objects::nonNull).collect(Collectors.toList());
   }
 
   private Outfit retrieveSingleOutfit(String href) {
@@ -123,6 +123,9 @@ public class PolyvoreClient {
     crumb.forEach(cat -> {
       category.add(cat.findElement(By.xpath(".//span")).getText());
     });
+    if(category.contains("Home") || category.contains("Home Decor")) {
+      return null;
+    }
     item.setCategories(category);
 
     WebElement thingImg = driver.findElement(By.id("thing_img")).findElement(By.xpath(".//a")).findElement(By.xpath(".//img"));
@@ -135,7 +138,7 @@ public class PolyvoreClient {
     String desc = element.findElement(By.xpath(".//div")).getText();
 
     item.setItemImage(retrieveImage(imageHref));
-    item.setItemTitle(title.replaceAll("\\\\", " "));
+    item.setItemTitle(title);
     item.setDesc(desc);
 
     return item;

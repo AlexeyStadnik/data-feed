@@ -8,14 +8,16 @@ import org.openqa.selenium.firefox.FirefoxDriver;
  */
 public class NewRunner {
   public static void main(String[] args) {
-    FirefoxDriver ff = new FirefoxDriver();
+//    FirefoxDriver ff = new FirefoxDriver();
+//
+//    ff.navigate().to("http://www.polyvore.com/outfits/search.sets?date=day&item_count.from=4&item_count.to=10");
+//
+//    while(ff.findElements(By.className("product-list-item")) == null || ff.findElements(By.className("product-list-item")).isEmpty()) {
+//      ff.executeScript("window.scrollBy(100000000, 10000000000);");
+//      System.out.println(ff.findElements(By.className("type_set")).size());
+//    }
 
-    ff.navigate().to("http://www.polyvore.com/outfits/search.sets?date=day&item_count.from=4&item_count.to=10");
-
-    while(ff.findElements(By.className("product-list-item")) == null || ff.findElements(By.className("product-list-item")).isEmpty()) {
-      ff.executeScript("window.scrollBy(100000000, 10000000000);");
-      System.out.println(ff.findElements(By.className("type_set")).size());
-    }
-
+    String str = "la la / la / / smth/";
+    System.out.println(str.replaceAll("/", "").trim().replaceAll(" ", ""));
   }
 }
